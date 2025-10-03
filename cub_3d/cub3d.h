@@ -48,6 +48,7 @@ typedef struct s_player {
     int move_right;
 } t_player;
 
+
 typedef struct s_config
 {
 	char		**map;

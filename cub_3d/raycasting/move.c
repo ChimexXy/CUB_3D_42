@@ -1,7 +1,5 @@
 #include "raycasting.h"
 
-#define MOVE_SPEED 0.05
-
 void handle_keys(mlx_key_data_t keydata, void *param)
 {
     t_config *cfg = (t_config *)param;

@@ -6,7 +6,7 @@
 /*   By: mbarhoun <mbarhoun@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 21:51:17 by mbarhoun          #+#    #+#             */
-/*   Updated: 2025/09/29 21:51:36 by mbarhoun         ###   ########.fr       */
+/*   Updated: 2025/10/02 15:34:56 by mbarhoun         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,8 @@ static bool	is_correct_void(char **map, int y, int x)
 	{
 		if (map[y - 1][x] == ' ' || map[y + 1][x] == ' '
 			|| map[y][x - 1] == ' ' || map[y][x + 1] == ' ')
+			return (0);
+		if (x > ft_strlen(map[y + 1]) || x > ft_strlen(map[y - 1]))
 			return (0);
 	}
 	return (1);
