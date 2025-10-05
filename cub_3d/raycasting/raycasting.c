@@ -37,6 +37,7 @@ void set_player_position(t_config *cfg)
             {
                 cfg->player.x = (double)x + 0.5;
                 cfg->player.y = (double)y + 0.5;
+				init_player_direction(cfg, c); 
                 return;
             }
             x++;
@@ -98,14 +99,14 @@ void draw_map(t_config *cfg)
 
 void render_2d_map(t_config *cfg)
 {
-    cfg->mlx = mlx_init(1920, 1080, "Cub3D 2D Map", true);
+    cfg->mlx = mlx_init(WIN_W, WIN_H, "Cub3D", true);
     if (!cfg->mlx)
     {
         printf("Error: MLX init failed\n");
         exit(1);
     }
     
-    cfg->img = mlx_new_image(cfg->mlx, 1920, 1080);
+    cfg->img = mlx_new_image(cfg->mlx, WIN_W, WIN_H);
     if (!cfg->img)
     {
         printf("Error: Image creation failed\n");
@@ -114,20 +115,19 @@ void render_2d_map(t_config *cfg)
     
     mlx_image_to_window(cfg->mlx, cfg->img, 0, 0);
     
+    // Initialize player movement flags
     cfg->player.move_up = 0;
     cfg->player.move_down = 0;
     cfg->player.move_left = 0;
     cfg->player.move_right = 0;
+    cfg->player.rotate_left = 0;
+    cfg->player.rotate_right = 0;
     
     set_player_position(cfg);
-    
-    draw_map(cfg);
-    draw_player(cfg);
     
     mlx_key_hook(cfg->mlx, &handle_keys, cfg);
     mlx_loop_hook(cfg->mlx, &render_frame, cfg);
     
     mlx_loop(cfg->mlx);
-    
     mlx_terminate(cfg->mlx);
 }

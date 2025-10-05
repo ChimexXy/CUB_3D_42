@@ -46,7 +46,20 @@ typedef struct s_player {
     int move_down;
     int move_left;
     int move_right;
+	int rotate_left;
+	int rotate_right;
 } t_player;
+
+typedef struct s_ray {
+    double start_x;
+    double start_y;
+    double end_x;
+    double end_y;
+    double angle;
+} t_ray;
+
+
+   
 
 
 typedef struct s_config
@@ -65,6 +78,9 @@ typedef struct s_config
 	mlx_t       *mlx;        // MLX42 instance
     mlx_image_t *img;   
 	t_player player;
+	t_ray *rays;  // Array to store ray data for visualization
+    int num_rays;
+
 }	t_config;
 
 #endif

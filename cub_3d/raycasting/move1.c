@@ -16,12 +16,26 @@ void raycasting(t_config *cfg)
 {
     int x;
     
+    // Allocate rays array if not already allocated
+    if (!cfg->rays)
+    {
+        cfg->num_rays = WIN_W;
+        cfg->rays = malloc(sizeof(t_ray) * cfg->num_rays);
+    }
+    
     for (x = 0; x < WIN_W; x++)
     {
+        // Store ray start position (player position)
+        cfg->rays[x].start_x = cfg->player.x;
+        cfg->rays[x].start_y = cfg->player.y;
+        
         // Calculate ray position and direction
         double camera_x = 2 * x / (double)WIN_W - 1;
         double ray_dir_x = cfg->dir_x + cfg->plane_x * camera_x;
         double ray_dir_y = cfg->dir_y + cfg->plane_y * camera_x;
+        
+        // Store ray direction
+        cfg->rays[x].angle = atan2(ray_dir_y, ray_dir_x);
         
         // Which box of the map we're in
         int map_x = (int)cfg->player.x;
@@ -35,12 +49,10 @@ void raycasting(t_config *cfg)
         double side_dist_x;
         double side_dist_y;
         
-        // What direction to step in x or y-direction
         int step_x;
         int step_y;
-        
         int hit = 0;
-        int side; // 0 = x-side, 1 = y-side
+        int side;
         
         // Calculate step and initial sideDist
         if (ray_dir_x < 0)
@@ -79,6 +91,7 @@ void raycasting(t_config *cfg)
                 map_y += step_y;
                 side = 1;
             }
+            
             // Check if ray hit a wall
             if (map_y < 0 || map_x < 0 || !cfg->map[map_y] || !cfg->map[map_y][map_x])
                 hit = 1;
@@ -86,32 +99,98 @@ void raycasting(t_config *cfg)
                 hit = 1;
         }
         
-        // Calculate distance projected on camera direction
+        // Calculate distance and end point for ray visualization
         if (side == 0)
             perp_wall_dist = (side_dist_x - delta_dist_x);
         else
             perp_wall_dist = (side_dist_y - delta_dist_y);
         
-        // Calculate height of line to draw on screen
+        // Store ray end position (wall hit position)
+        cfg->rays[x].end_x = cfg->player.x + ray_dir_x * perp_wall_dist;
+        cfg->rays[x].end_y = cfg->player.y + ray_dir_y * perp_wall_dist;
+        
+        // ... rest of your 3D rendering code (line height calculation, drawing, etc.)
         int line_height = (int)(WIN_H / perp_wall_dist);
-        
-        // Calculate lowest and highest pixel to fill
         int draw_start = -line_height / 2 + WIN_H / 2;
-        if (draw_start < 0)
-            draw_start = 0;
+        if (draw_start < 0) draw_start = 0;
         int draw_end = line_height / 2 + WIN_H / 2;
-        if (draw_end >= WIN_H)
-            draw_end = WIN_H - 1;
+        if (draw_end >= WIN_H) draw_end = WIN_H - 1;
         
-        // Choose wall color
         uint32_t color;
         if (side == 1)
-            color = 0x888888FF; // Darker for y-side
+            color = 0x888888FF;
         else
-            color = 0xCCCCCCFF; // Lighter for x-side
+            color = 0xCCCCCCFF;
         
-        // Draw the vertical stripe
         draw_vertical_line(cfg, x, draw_start, draw_end, color);
+    }
+}
+
+void draw_rays_on_minimap(t_config *cfg)
+{
+    int i;
+    double scale = CELL;  // Scale factor for minimap
+    
+    // Draw only every Nth ray to avoid clutter (adjust as needed)
+    int ray_step = cfg->num_rays / 60;  // Draw ~60 rays
+    
+    if (ray_step < 1) ray_step = 1;
+    
+    for (i = 0; i < cfg->num_rays; i += ray_step)
+    {
+        if (!cfg->rays) break;
+        
+        double start_x = cfg->rays[i].start_x * scale;
+        double start_y = cfg->rays[i].start_y * scale;
+        double end_x = cfg->rays[i].end_x * scale;
+        double end_y = cfg->rays[i].end_y * scale;
+        
+        // Draw ray line using Bresenham's line algorithm
+        draw_line(cfg, start_x, start_y, end_x, end_y, 0xFF0000FF);
+    }
+    
+    // Draw player direction line (thicker and different color)
+    double dir_end_x = cfg->player.x * scale + cfg->dir_x * 20;
+    double dir_end_y = cfg->player.y * scale + cfg->dir_y * 20;
+    draw_thick_line(cfg, cfg->player.x * scale, cfg->player.y * scale, 
+                   dir_end_x, dir_end_y, 0x00FF00FF, 2);
+}
+
+// Bresenham's line algorithm for drawing lines
+void draw_line(t_config *cfg, double start_x, double start_y, double end_x, double end_y, uint32_t color)
+{
+    int x0 = (int)start_x;
+    int y0 = (int)start_y;
+    int x1 = (int)end_x;
+    int y1 = (int)end_y;
+    
+    int dx = abs(x1 - x0);
+    int dy = abs(y1 - y0);
+    int sx = (x0 < x1) ? 1 : -1;
+    int sy = (y0 < y1) ? 1 : -1;
+    int err = dx - dy;
+    
+    while (1)
+    {
+        // Only draw if within image bounds
+        if (x0 >= 0 && x0 < (int)cfg->img->width && y0 >= 0 && y0 < (int)cfg->img->height)
+        {
+            mlx_put_pixel(cfg->img, x0, y0, color);
+        }
+        
+        if (x0 == x1 && y0 == y1) break;
+        
+        int e2 = 2 * err;
+        if (e2 > -dy)
+        {
+            err -= dy;
+            x0 += sx;
+        }
+        if (e2 < dx)
+        {
+            err += dx;
+            y0 += sy;
+        }
     }
 }
 
@@ -231,6 +310,8 @@ void handle_keys(mlx_key_data_t keydata, void *param)
     }
 }
 
+
+
 void render_frame(void *param)
 {
     t_config *cfg = (t_config *)param;
@@ -240,89 +321,11 @@ void render_frame(void *param)
     
     update_player_position(cfg);
     
-	raycasting(cfg);
-	 draw_map(cfg);
-    draw_player(cfg);	
-	 draw_rays_on_minimap(cfg);
-
-    // Perform 3D raycasting
-}
-
-
-// For drawing thicker direction line
-void draw_thick_line(t_config *cfg, double start_x, double start_y, double end_x, double end_y, uint32_t color, int thickness)
-{
-    int i;
-    for (i = -thickness/2; i <= thickness/2; i++)
-    {
-        draw_line(cfg, start_x + i, start_y, end_x + i, end_y, color);
-        draw_line(cfg, start_x, start_y + i, end_x, end_y + i, color);
-    }
-}
-// Bresenham's line algorithm for drawing lines
-void draw_line(t_config *cfg, double start_x, double start_y, double end_x, double end_y, uint32_t color)
-{
-    int x0 = (int)start_x;
-    int y0 = (int)start_y;
-    int x1 = (int)end_x;
-    int y1 = (int)end_y;
+    // Perform 3D raycasting (this now also stores ray data)
+    // raycasting(cfg);
     
-    int dx = abs(x1 - x0);
-    int dy = abs(y1 - y0);
-    int sx = (x0 < x1) ? 1 : -1;
-    int sy = (y0 < y1) ? 1 : -1;
-    int err = dx - dy;
-    
-    while (1)
-    {
-        // Only draw if within image bounds
-        if (x0 >= 0 && x0 < (int)cfg->img->width && y0 >= 0 && y0 < (int)cfg->img->height)
-        {
-            mlx_put_pixel(cfg->img, x0, y0, color);
-        }
-        
-        if (x0 == x1 && y0 == y1) break;
-        
-        int e2 = 2 * err;
-        if (e2 > -dy)
-        {
-            err -= dy;
-            x0 += sx;
-        }
-        if (e2 < dx)
-        {
-            err += dx;
-            y0 += sy;
-        }
-    }
-}
-
-void draw_rays_on_minimap(t_config *cfg)
-{
-    int i;
-    double scale = CELL;  // Scale factor for minimap
-    
-    // Draw only every Nth ray to avoid clutter (adjust as needed)
-    int ray_step = cfg->num_rays / 60;  // Draw ~60 rays
-    
-    if (ray_step < 1) ray_step = 1;
-    
-    for (i = 0; i < cfg->num_rays; i += ray_step)
-    {
-        if (!cfg->rays) break;
-        
-        double start_x = cfg->rays[i].start_x * scale;
-        double start_y = cfg->rays[i].start_y * scale;
-        double end_x = cfg->rays[i].end_x * scale;
-        double end_y = cfg->rays[i].end_y * scale;
-        
-        // Draw ray line using Bresenham's line algorithm
-        draw_line(cfg, start_x, start_y, end_x, end_y, 0xFF0000FF);
-    }
-    
-    // Draw player direction line (thicker and different color)
-    double dir_end_x = cfg->player.x * scale + cfg->dir_x * 20;
-    double dir_end_y = cfg->player.y * scale + cfg->dir_y * 20;
-    draw_thick_line(cfg, cfg->player.x * scale, cfg->player.y * scale, 
-                   dir_end_x, dir_end_y, 0x00FF00FF, 2);
+    // Draw 2D minimap with rays
+    draw_map(cfg);           // Your existing 2D map drawing
+    draw_player(cfg);        // Your existing player drawing
+    draw_rays_on_minimap(cfg); // New: draw the rays!
 }

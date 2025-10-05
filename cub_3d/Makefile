@@ -32,6 +32,7 @@ SRC = 	cub3d.c								\
 		./parsing/utils/utils04.c 			\
 		./raycasting/move.c					\
 		./raycasting/raycasting.c			\
+		./raycasting/direction.c			\
 
 HDR = 	cub3d.h	./raycasting/raycasting.h	\
 
