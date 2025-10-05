@@ -1,328 +1,303 @@
 #include "raycasting.h"
 
-void draw_vertical_line(t_config *cfg, int x, int start, int end, uint32_t color)
+void	draw_vertical_line(t_config *cfg, int x, int start, int end, uint32_t color)
 {
-    int y;
+	int	y;
 
-    y = start;
-    while (y <= end)
-    {
-        mlx_put_pixel(cfg->img, x, y, color);
-        y++;
-    }
-}
-
-void raycasting(t_config *cfg)
-{
-    int x;
-    
-    for (x = 0; x < WIN_W; x++)
-    {
-        // Calculate ray position and direction
-        double camera_x = 2 * x / (double)WIN_W - 1;
-        double ray_dir_x = cfg->dir_x + cfg->plane_x * camera_x;
-        double ray_dir_y = cfg->dir_y + cfg->plane_y * camera_x;
-        
-        // Which box of the map we're in
-        int map_x = (int)cfg->player.x;
-        int map_y = (int)cfg->player.y;
-        
-        // Length of ray from one side to next side
-        double delta_dist_x = (ray_dir_x == 0) ? 1e30 : fabs(1 / ray_dir_x);
-        double delta_dist_y = (ray_dir_y == 0) ? 1e30 : fabs(1 / ray_dir_y);
-        
-        double perp_wall_dist;
-        double side_dist_x;
-        double side_dist_y;
-        
-        // What direction to step in x or y-direction
-        int step_x;
-        int step_y;
-        
-        int hit = 0;
-        int side; // 0 = x-side, 1 = y-side
-        
-        // Calculate step and initial sideDist
-        if (ray_dir_x < 0)
-        {
-            step_x = -1;
-            side_dist_x = (cfg->player.x - map_x) * delta_dist_x;
-        }
-        else
-        {
-            step_x = 1;
-            side_dist_x = (map_x + 1.0 - cfg->player.x) * delta_dist_x;
-        }
-        if (ray_dir_y < 0)
-        {
-            step_y = -1;
-            side_dist_y = (cfg->player.y - map_y) * delta_dist_y;
-        }
-        else
-        {
-            step_y = 1;
-            side_dist_y = (map_y + 1.0 - cfg->player.y) * delta_dist_y;
-        }
-        
-        // Perform DDA
-        while (hit == 0)
-        {
-            if (side_dist_x < side_dist_y)
-            {
-                side_dist_x += delta_dist_x;
-                map_x += step_x;
-                side = 0;
-            }
-            else
-            {
-                side_dist_y += delta_dist_y;
-                map_y += step_y;
-                side = 1;
-            }
-            // Check if ray hit a wall
-            if (map_y < 0 || map_x < 0 || !cfg->map[map_y] || !cfg->map[map_y][map_x])
-                hit = 1;
-            else if (cfg->map[map_y][map_x] == '1')
-                hit = 1;
-        }
-        
-        // Calculate distance projected on camera direction
-        if (side == 0)
-            perp_wall_dist = (side_dist_x - delta_dist_x);
-        else
-            perp_wall_dist = (side_dist_y - delta_dist_y);
-        
-        // Calculate height of line to draw on screen
-        int line_height = (int)(WIN_H / perp_wall_dist);
-        
-        // Calculate lowest and highest pixel to fill
-        int draw_start = -line_height / 2 + WIN_H / 2;
-        if (draw_start < 0)
-            draw_start = 0;
-        int draw_end = line_height / 2 + WIN_H / 2;
-        if (draw_end >= WIN_H)
-            draw_end = WIN_H - 1;
-        
-        // Choose wall color
-        uint32_t color;
-        if (side == 1)
-            color = 0x888888FF; // Darker for y-side
-        else
-            color = 0xCCCCCCFF; // Lighter for x-side
-        
-        // Draw the vertical stripe
-        draw_vertical_line(cfg, x, draw_start, draw_end, color);
-    }
-}
-
-int is_wall(t_config *cfg, double x, double y)
-{
-    double player_radius = 1.0 / 6.0;
-    double margin = player_radius * 0.5;
-    
-    double corners[4][2] = {
-        {x - margin, y - margin},
-        {x + margin, y - margin},
-        {x - margin, y + margin},
-        {x + margin, y + margin}
-    };
-    
-    int i = 0;
-    while (i < 4)
-    {
-        double check_x = corners[i][0];
-        double check_y = corners[i][1];
-        
-        int map_x = (int)check_x;
-        int map_y = (int)check_y;
-        
-        if (map_y < 0 || map_x < 0)
-            return (1);
-        if (!cfg->map[map_y])
-            return (1);
-        if (!cfg->map[map_y][map_x])
-            return (1);
-        if (cfg->map[map_y][map_x] == '1')
-            return (1);
-        i++;
-    }
-    return (0);
-}
-
-void update_player_position(t_config *cfg)
-{
-    double new_x = cfg->player.x;
-    double new_y = cfg->player.y;
-    
-    // Rotation
-    if (cfg->player.rotate_right)
-    {
-		double old_dir_x = cfg->dir_x;
-		cfg->dir_x = cfg->dir_x * cos(ROT_SPEED) - cfg->dir_y * sin(ROT_SPEED);
-		cfg->dir_y = old_dir_x * sin(ROT_SPEED) + cfg->dir_y * cos(ROT_SPEED);
-		double old_plane_x = cfg->plane_x;
-		cfg->plane_x = cfg->plane_x * cos(ROT_SPEED) - cfg->plane_y * sin(ROT_SPEED);
-		cfg->plane_y = old_plane_x * sin(ROT_SPEED) + cfg->plane_y * cos(ROT_SPEED);
+	y = start;
+	while (y <= end)
+	{
+		if (x >= 0 && x < WIN_W && y >= 0 && y < WIN_H)
+			mlx_put_pixel(cfg->img, x, y, color);
+		y++;
 	}
-    if (cfg->player.rotate_left)
-    {
-		double old_dir_x = cfg->dir_x;
-		cfg->dir_x = cfg->dir_x * cos(-ROT_SPEED) - cfg->dir_y * sin(-ROT_SPEED);
-		cfg->dir_y = old_dir_x * sin(-ROT_SPEED) + cfg->dir_y * cos(-ROT_SPEED);
-		double old_plane_x = cfg->plane_x;
-		cfg->plane_x = cfg->plane_x * cos(-ROT_SPEED) - cfg->plane_y * sin(-ROT_SPEED);
-		cfg->plane_y = old_plane_x * sin(-ROT_SPEED) + cfg->plane_y * cos(-ROT_SPEED);
-    }
-
-    // Movement
-    if (cfg->player.move_up)
-    {
-        new_x += cfg->dir_x * MOVE_SPEED;
-        new_y += cfg->dir_y * MOVE_SPEED;
-    }
-    if (cfg->player.move_down)
-    {
-        new_x -= cfg->dir_x * MOVE_SPEED;
-        new_y -= cfg->dir_y * MOVE_SPEED;
-    }
-    if (cfg->player.move_left)
-    {
-        new_x += cfg->dir_y * MOVE_SPEED;
-        new_y -= cfg->dir_x * MOVE_SPEED;
-    }
-    if (cfg->player.move_right)
-    {
-        new_x -= cfg->dir_y * MOVE_SPEED;
-        new_y += cfg->dir_x * MOVE_SPEED;
-    }
-    
-    // Collision detection
-    if (!is_wall(cfg, new_x, cfg->player.y))
-        cfg->player.x = new_x;
-    if (!is_wall(cfg, cfg->player.x, new_y))
-        cfg->player.y = new_y;
 }
 
-void handle_keys(mlx_key_data_t keydata, void *param)
+static void	init_ray_direction(t_config *cfg, int x, t_ray *ray)
 {
-    t_config *cfg = (t_config *)param;
-    
-    if (keydata.key == MLX_KEY_ESCAPE && keydata.action == MLX_PRESS)
-        mlx_close_window(cfg->mlx);
-    
-    if (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT)
-    {
-        if (keydata.key == MLX_KEY_W) cfg->player.move_up = 1;
-        if (keydata.key == MLX_KEY_S) cfg->player.move_down = 1;
-        if (keydata.key == MLX_KEY_A) cfg->player.move_left = 1;
-        if (keydata.key == MLX_KEY_D) cfg->player.move_right = 1;
-        if (keydata.key == MLX_KEY_LEFT) cfg->player.rotate_left = 1;
-        if (keydata.key == MLX_KEY_RIGHT) cfg->player.rotate_right = 1;
-    }
+	double	camera_x;
 
-    if (keydata.action == MLX_RELEASE)
-    {
-        if (keydata.key == MLX_KEY_W) cfg->player.move_up = 0;
-        if (keydata.key == MLX_KEY_S) cfg->player.move_down = 0;
-        if (keydata.key == MLX_KEY_A) cfg->player.move_left = 0;
-        if (keydata.key == MLX_KEY_D) cfg->player.move_right = 0;
-        if (keydata.key == MLX_KEY_LEFT) cfg->player.rotate_left = 0;
-        if (keydata.key == MLX_KEY_RIGHT) cfg->player.rotate_right = 0;
-    }
+	camera_x = 2 * x / (double)WIN_W - 1;
+	ray->dir_x = cfg->dir_x + cfg->plane_x * camera_x;
+	ray->dir_y = cfg->dir_y + cfg->plane_y * camera_x;
+	ray->map_x = (int)cfg->player.x;
+	ray->map_y = (int)cfg->player.y;
 }
 
-void render_frame(void *param)
+static void	init_delta_dist(t_ray *ray)
 {
-    t_config *cfg = (t_config *)param;
-    
-    // Clear screen
-    memset(cfg->img->pixels, 0, cfg->img->width * cfg->img->height * sizeof(uint32_t));
-    
-    update_player_position(cfg);
-    
+	if (ray->dir_x == 0)
+		ray->delta_dist_x = 1e30;
+	else
+		ray->delta_dist_x = fabs(1 / ray->dir_x);
+	if (ray->dir_y == 0)
+		ray->delta_dist_y = 1e30;
+	else
+		ray->delta_dist_y = fabs(1 / ray->dir_y);
+}
+
+static void	init_step_x(t_config *cfg, t_ray *ray)
+{
+	if (ray->dir_x < 0)
+	{
+		ray->step_x = -1;
+		ray->side_dist_x = (cfg->player.x - ray->map_x) * ray->delta_dist_x;
+	}
+	else
+	{
+		ray->step_x = 1;
+		ray->side_dist_x = (ray->map_x + 1.0 - cfg->player.x)
+			* ray->delta_dist_x;
+	}
+}
+
+static void	init_step_y(t_config *cfg, t_ray *ray)
+{
+	if (ray->dir_y < 0)
+	{
+		ray->step_y = -1;
+		ray->side_dist_y = (cfg->player.y - ray->map_y) * ray->delta_dist_y;
+	}
+	else
+	{
+		ray->step_y = 1;
+		ray->side_dist_y = (ray->map_y + 1.0 - cfg->player.y)
+			* ray->delta_dist_y;
+	}
+}
+
+static int	check_hit(t_config *cfg, t_ray *ray)
+{
+	if (ray->map_y < 0 || ray->map_x < 0)
+		return (1);
+	if (!cfg->map[ray->map_y] || !cfg->map[ray->map_y][ray->map_x])
+		return (1);
+	if (cfg->map[ray->map_y][ray->map_x] == '1')
+		return (1);
+	return (0);
+}
+
+static void	perform_dda(t_config *cfg, t_ray *ray)
+{
+	int	hit;
+
+	hit = 0;
+	while (hit == 0)
+	{
+		if (ray->side_dist_x < ray->side_dist_y)
+		{
+			ray->side_dist_x += ray->delta_dist_x;
+			ray->map_x += ray->step_x;
+			ray->side = 0;
+		}
+		else
+		{
+			ray->side_dist_y += ray->delta_dist_y;
+			ray->map_y += ray->step_y;
+			ray->side = 1;
+		}
+		hit = check_hit(cfg, ray);
+	}
+}
+
+static double	calc_wall_dist(t_ray *ray)
+{
+	if (ray->side == 0)
+		return (ray->side_dist_x - ray->delta_dist_x);
+	else
+		return (ray->side_dist_y - ray->delta_dist_y);
+}
+
+static void	calc_draw_bounds(double wall_dist, int *start, int *end)
+{
+	int	line_height;
+
+	line_height = (int)(WIN_H / wall_dist);
+	*start = -line_height / 2 + WIN_H / 2;
+	if (*start < 0)
+		*start = 0;
+	*end = line_height / 2 + WIN_H / 2;
+	if (*end >= WIN_H)
+		*end = WIN_H - 1;
+}
+
+static uint32_t	get_wall_color(int side)
+{
+	if (side == 1)
+		return (0x888888FF);
+	else
+		return (0xCCCCCCFF);
+}
+
+static void	cast_single_ray(t_config *cfg, int x)
+{
+	t_ray		ray;
+	double		wall_dist;
+	int			draw_start;
+	int			draw_end;
+	uint32_t	color;
+
+	init_ray_direction(cfg, x, &ray);
+	init_delta_dist(&ray);
+	init_step_x(cfg, &ray);
+	init_step_y(cfg, &ray);
+	perform_dda(cfg, &ray);
+	wall_dist = calc_wall_dist(&ray);
+	calc_draw_bounds(wall_dist, &draw_start, &draw_end);
+	color = get_wall_color(ray.side);
+	draw_vertical_line(cfg, x, draw_start, draw_end, color);
+}
+
+void	raycasting(t_config *cfg)
+{
+	int	x;
+
+	x = 0;
+	while (x < WIN_W)
+	{
+		cast_single_ray(cfg, x);
+		x++;
+	}
+}
+
+static int	check_point_wall(t_config *cfg, int mx, int my)
+{
+	if (my < 0 || mx < 0)
+		return (1);
+	if (!cfg->map[my] || !cfg->map[my][mx])
+		return (1);
+	if (cfg->map[my][mx] == '1')
+		return (1);
+	return (0);
+}
+
+int	is_wall(t_config *cfg, double x, double y)
+{
+	double	m;
+	int		i;
+	int		mx;
+	int		my;
+
+	m = (1.0 / 6.0) * 0.5;
+	i = 0;
+	while (i < 4)
+	{
+		if (i == 0)
+			mx = (int)(x - m);
+		else if (i == 1)
+			mx = (int)(x + m);
+		else if (i == 2)
+			mx = (int)(x - m);
+		else
+			mx = (int)(x + m);
+		if (i < 2)
+			my = (int)(y - m);
+		else
+			my = (int)(y + m);
+		if (check_point_wall(cfg, mx, my))
+			return (1);
+		i++;
+	}
+	return (0);
+}
+
+static void	rotate(t_config *cfg, double angle)
+{
+	double	old_dir_x;
+	double	old_plane_x;
+
+	old_dir_x = cfg->dir_x;
+	cfg->dir_x = cfg->dir_x * cos(angle) - cfg->dir_y * sin(angle);
+	cfg->dir_y = old_dir_x * sin(angle) + cfg->dir_y * cos(angle);
+	old_plane_x = cfg->plane_x;
+	cfg->plane_x = cfg->plane_x * cos(angle) - cfg->plane_y * sin(angle);
+	cfg->plane_y = old_plane_x * sin(angle) + cfg->plane_y * cos(angle);
+}
+
+static void	apply_rotation(t_config *cfg)
+{
+	if (cfg->player.rotate_right)
+		rotate(cfg, ROT_SPEED);
+	if (cfg->player.rotate_left)
+		rotate(cfg, -ROT_SPEED);
+}
+
+static void	apply_movement(t_config *cfg, double *nx, double *ny)
+{
+	if (cfg->player.move_up)
+	{
+		*nx += cfg->dir_x * MOVE_SPEED;
+		*ny += cfg->dir_y * MOVE_SPEED;
+	}
+	if (cfg->player.move_down)
+	{
+		*nx -= cfg->dir_x * MOVE_SPEED;
+		*ny -= cfg->dir_y * MOVE_SPEED;
+	}
+	if (cfg->player.move_left)
+	{
+		*nx += cfg->dir_y * MOVE_SPEED;
+		*ny -= cfg->dir_x * MOVE_SPEED;
+	}
+	if (cfg->player.move_right)
+	{
+		*nx -= cfg->dir_y * MOVE_SPEED;
+		*ny += cfg->dir_x * MOVE_SPEED;
+	}
+}
+
+void	update_player_position(t_config *cfg)
+{
+	double	nx;
+	double	ny;
+
+	nx = cfg->player.x;
+	ny = cfg->player.y;
+	apply_rotation(cfg);
+	apply_movement(cfg, &nx, &ny);
+	if (!is_wall(cfg, nx, cfg->player.y))
+		cfg->player.x = nx;
+	if (!is_wall(cfg, cfg->player.x, ny))
+		cfg->player.y = ny;
+}
+
+static void	set_key_state(mlx_key_data_t key, t_config *cfg, int press)
+{
+	if (key.key == MLX_KEY_W)
+		cfg->player.move_up = press;
+	if (key.key == MLX_KEY_S)
+		cfg->player.move_down = press;
+	if (key.key == MLX_KEY_A)
+		cfg->player.move_left = press;
+	if (key.key == MLX_KEY_D)
+		cfg->player.move_right = press;
+	if (key.key == MLX_KEY_LEFT)
+		cfg->player.rotate_left = press;
+	if (key.key == MLX_KEY_RIGHT)
+		cfg->player.rotate_right = press;
+}
+
+void	handle_keys(mlx_key_data_t key, void *param)
+{
+	t_config	*cfg;
+	int			press;
+
+	cfg = param;
+	if (key.key == MLX_KEY_ESCAPE && key.action == MLX_PRESS)
+		mlx_close_window(cfg->mlx);
+	press = (key.action == MLX_PRESS || key.action == MLX_REPEAT);
+	if (key.action == MLX_RELEASE)
+		press = 0;
+	set_key_state(key, cfg, press);
+}
+
+void	render_frame(void *param)
+{
+	t_config	*cfg;
+
+	cfg = (t_config *)param;
+	memset(cfg->img->pixels, 0,
+		cfg->img->width * cfg->img->height * sizeof(uint32_t));
+	update_player_position(cfg);
 	raycasting(cfg);
-	 draw_map(cfg);
-    draw_player(cfg);	
-	 draw_rays_on_minimap(cfg);
-
-    // Perform 3D raycasting
-}
-
-
-// For drawing thicker direction line
-void draw_thick_line(t_config *cfg, double start_x, double start_y, double end_x, double end_y, uint32_t color, int thickness)
-{
-    int i;
-    for (i = -thickness/2; i <= thickness/2; i++)
-    {
-        draw_line(cfg, start_x + i, start_y, end_x + i, end_y, color);
-        draw_line(cfg, start_x, start_y + i, end_x, end_y + i, color);
-    }
-}
-// Bresenham's line algorithm for drawing lines
-void draw_line(t_config *cfg, double start_x, double start_y, double end_x, double end_y, uint32_t color)
-{
-    int x0 = (int)start_x;
-    int y0 = (int)start_y;
-    int x1 = (int)end_x;
-    int y1 = (int)end_y;
-    
-    int dx = abs(x1 - x0);
-    int dy = abs(y1 - y0);
-    int sx = (x0 < x1) ? 1 : -1;
-    int sy = (y0 < y1) ? 1 : -1;
-    int err = dx - dy;
-    
-    while (1)
-    {
-        // Only draw if within image bounds
-        if (x0 >= 0 && x0 < (int)cfg->img->width && y0 >= 0 && y0 < (int)cfg->img->height)
-        {
-            mlx_put_pixel(cfg->img, x0, y0, color);
-        }
-        
-        if (x0 == x1 && y0 == y1) break;
-        
-        int e2 = 2 * err;
-        if (e2 > -dy)
-        {
-            err -= dy;
-            x0 += sx;
-        }
-        if (e2 < dx)
-        {
-            err += dx;
-            y0 += sy;
-        }
-    }
-}
-
-void draw_rays_on_minimap(t_config *cfg)
-{
-    int i;
-    double scale = CELL;  // Scale factor for minimap
-    
-    // Draw only every Nth ray to avoid clutter (adjust as needed)
-    int ray_step = cfg->num_rays / 60;  // Draw ~60 rays
-    
-    if (ray_step < 1) ray_step = 1;
-    
-    for (i = 0; i < cfg->num_rays; i += ray_step)
-    {
-        if (!cfg->rays) break;
-        
-        double start_x = cfg->rays[i].start_x * scale;
-        double start_y = cfg->rays[i].start_y * scale;
-        double end_x = cfg->rays[i].end_x * scale;
-        double end_y = cfg->rays[i].end_y * scale;
-        
-        // Draw ray line using Bresenham's line algorithm
-        draw_line(cfg, start_x, start_y, end_x, end_y, 0xFF0000FF);
-    }
-    
-    // Draw player direction line (thicker and different color)
-    double dir_end_x = cfg->player.x * scale + cfg->dir_x * 20;
-    double dir_end_y = cfg->player.y * scale + cfg->dir_y * 20;
-    draw_thick_line(cfg, cfg->player.x * scale, cfg->player.y * scale, 
-                   dir_end_x, dir_end_y, 0x00FF00FF, 2);
 }
