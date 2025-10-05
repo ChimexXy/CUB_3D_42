@@ -51,7 +51,8 @@ void draw_player(t_config *cfg)
     int px;
     int py;
     int size;
-    int y, x;
+    int y;
+    int x;
     int start_x;
     int start_y;
     
@@ -137,38 +138,3 @@ void	render_2d_map(t_config *cfg)
 	mlx_loop(cfg->mlx);
 	mlx_terminate(cfg->mlx);
 }
-
-// void render_2d_map(t_config *cfg)
-// {
-//     cfg->mlx = mlx_init(WIN_W, WIN_H, "Cub3D", true);
-//     if (!cfg->mlx)
-//     {
-//         printf("Error: MLX init failed\n");
-//         exit(1);
-//     }
-    
-//     cfg->img = mlx_new_image(cfg->mlx, WIN_W, WIN_H);
-//     if (!cfg->img)
-//     {
-//         printf("Error: Image creation failed\n");
-//         exit(1);
-//     }
-    
-//     mlx_image_to_window(cfg->mlx, cfg->img, 0, 0);
-    
-//     // Initialize player movement flags
-//     cfg->player.move_up = 0;
-//     cfg->player.move_down = 0;
-//     cfg->player.move_left = 0;
-//     cfg->player.move_right = 0;
-//     cfg->player.rotate_left = 0;
-//     cfg->player.rotate_right = 0;
-    
-//     set_player_position(cfg);
-    
-//     mlx_key_hook(cfg->mlx, &handle_keys, cfg);
-//     mlx_loop_hook(cfg->mlx, &render_frame, cfg);
-    
-//     mlx_loop(cfg->mlx);
-//     mlx_terminate(cfg->mlx);
-// }
